@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brasileirão Real-Time 1600x900</title>
+    <title>Brasileirão 2 Colunas 1600x900</title>
     <style>
-        /* Bloqueia margens e trava o tamanho milimétrico da tela */
         * {
             margin: 0;
             padding: 0;
@@ -19,36 +18,62 @@
             background-color: #0b0e14;
             color: #f0f3f8;
             display: grid;
-            grid-template-columns: 800px 800px; /* Divide a tela exatamente ao meio */
+            grid-template-columns: 1160px 440px; /* Alargado para caber as duas tabelas perfeitamente */
             overflow: hidden;
         }
 
-        /* Coluna da Esquerda: Widget Sofascore */
+        /* Área que segura as duas tabelas lado a lado */
         .col-esquerda {
             padding: 15px;
             background-color: #121620;
             border-right: 2px solid #1f2635;
             height: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            align-items: start;
         }
 
-        /* Container que força o Widget a se ajustar e reduzir a altura para 900px */
-        .container-widget {
-            width: 100%;
-            height: 820px;
+        /* Máscara visual que corta o widget do Sofascore */
+        .recorte-tabela {
+            width: 550px;
+            height: 810px;
             overflow: hidden;
+            position: relative;
             border-radius: 8px;
-            background-color: #ffffff; /* Fundo branco nativo do widget */
+            background-color: #ffffff;
+            border: 1px solid #1f2635;
         }
 
-        .container-widget iframe {
-            width: 100% !important;
-            height: 100% !important;
+        .recorte-tabela iframe {
+            position: absolute;
+            width: 550px !important;
+            height: 1150px !important;
+            border: none;
         }
 
-        /* Coluna da Direita: Painel de Informações Auxiliares */
+        /* AJUSTE COLUNA 1 (Times 1 a 10): Corta a parte de baixo */
+        #coluna-top10 iframe {
+            top: 0px;
+        }
+
+        /* AJUSTE COLUNA 2 (Times 11 a 20): Empurra o iframe para cima para mostrar a metade de baixo */
+        #coluna-bottom10 iframe {
+            top: -465px; /* Sobe o iframe exatamente para esconder os 10 primeiros */
+        }
+
+        /* Esconde os botões e logos repetidos do Sofascore na segunda coluna */
+        #coluna-bottom10::after {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 105px;
+            background-color: #ffffff;
+            z-index: 10;
+        }
+
         .col-direita {
             padding: 25px;
             background-color: #0b0e14;
@@ -64,7 +89,7 @@
         }
 
         h1 {
-            font-size: 28px;
+            font-size: 24px;
             color: #4ad2ff;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -83,11 +108,12 @@
         }
 
         .creditos {
-            font-size: 14px;
+            font-size: 13px;
             font-family: Arial, sans-serif;
             text-align: left;
             color: #7a8b9e;
-            margin-top: 10px;
+            margin-top: 8px;
+            grid-column: span 2;
         }
 
         .creditos a {
@@ -101,8 +127,8 @@
             border: 1px solid #1f2635;
             border-radius: 8px;
             padding: 20px;
-            margin-top: 20px;
             height: 100%;
+            margin-top: 20px;
         }
 
         .termo-uso {
@@ -116,43 +142,50 @@
 </head>
 <body>
 
-    <!-- LADO ESQUERDO: SEU EMBED DO SOFASCORE -->
+    <!-- LADO ESQUERDO: TRUQUE VISUAL DAS DUAS COLUNAS -->
     <div class="col-esquerda">
-        <div class="container-widget">
-            <iframe id="sofa-standings-embed-83-87678" src="https://widgets.sofascore.com/pt-BR/embed/tournament/83/season/87678/standings/Brasileiro%20Serie%20A%202026?widgetTitle=Brasileiro%20Serie%20A%202026&showCompetitionLogo=true" frameborder="0" scrolling="no"></iframe>
+        
+        <!-- Bloco do 1º ao 10º colocado -->
+        <div class="recorte-tabela" id="coluna-top10">
+            <iframe src="https://sofascore.com" scrolling="no"></iframe>
         </div>
+
+        <!-- Bloco do 11º ao 20º colocado -->
+        <div class="recorte-tabela" id="coluna-bottom10">
+            <iframe src="https://sofascore.com" scrolling="no"></iframe>
+        </div>
+
         <div class="creditos">
-            Classificação fornecida por <a target="_blank" href="https://www.sofascore.com/pt/football/tournament/brazil/brasileirao-serie-a/325#id:87678">Sofascore</a>
+            Classificação oficial dividida em 2x10 fornecida por <a target="_blank" href="https://sofascore.com">Sofascore</a>
         </div>
     </div>
-    <!-- LADO DIREITO: STATUS DO MONITOR -->
+    <!-- LADO DIREITO: INFORMAÇÕES ADICIONAIS -->
     <div class="col-direita">
         <div class="header-info">
-            <h1>Painel Geral Brasileirão</h1>
+            <h1>Brasileirão 2026</h1>
             <span class="badge-live" id="relogio-ciclo">Sincronizado</span>
         </div>
 
         <div class="box-status">
-            <p style="color: #7a8b9e; font-size: 15px; line-height: 1.6;">
-                Este monitor está configurado estritamente para a resolução <strong style="color: #4ad2ff;">1600x900</strong>. 
-                O painel à esquerda consome a transmissão direta do Sofascore, atualizando escudos, pontos e saldo de gols de forma nativa e sem travamento de CORS.
+            <p style="color: #7a8b9e; font-size: 14px; line-height: 1.6;">
+                <strong style="color: #4ad2ff;">Hack de Layout Ativo:</strong><br>
+                O widget engessado do Sofascore foi espelhado e recortado via CSS posicional (Clip mapping). 
+                <br><br>
+                Isso permitiu quebrar a estrutura de 20 linhas e criar as duas colunas paralelas de 10 times solicitadas para a proporção <strong style="color: #ffffff;">1600x900</strong>.
             </p>
         </div>
 
         <div class="termo-uso">
-            Otimizado para exibição contínua via GitHub Pages. Atualização em segundo plano ativa.
+            Transmissão de dados nativa ativa. Sem erros de CORS.
         </div>
     </div>
 
     <script>
-        // Função simples apenas para monitorar a estabilidade da página na tela
         function atualizarRelogio() {
             const agora = new Date();
             const textoHora = agora.toLocaleTimeString('pt-BR');
             document.getElementById('relogio-ciclo').innerText = `Live • ${textoHora}`;
         }
-        
-        // Mantém o monitor ativo atualizando o indicador a cada 1 segundo
         setInterval(atualizarRelogio, 1000);
         atualizarRelogio();
     </script>

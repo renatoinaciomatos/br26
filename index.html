@@ -86,7 +86,7 @@
         }
 
         td {
-            padding: 18.2px 6px; /* Altura exata calculada para as 10 linhas em 900px de tela */
+            padding: 18.2px 6px;
             text-align: center;
             border-bottom: 1px solid #1a202c;
         }
@@ -196,7 +196,6 @@
     <div class="col-tabela">
         <h2>Brasileirão Série A <span class="sub-tempo" id="atualizacao-tabela">Buscando API...</span></h2>
         <div class="wrapper-tabelas">
-            <!-- 1º ao 10º Colocado -->
             <table>
                 <thead>
                     <tr>
@@ -211,7 +210,6 @@
                 <tbody id="tabela-esquerda"></tbody>
             </table>
 
-            <!-- 11º ao 20º Colocado -->
             <table>
                 <thead>
                     <tr>
@@ -233,25 +231,18 @@
         <div class="container-cards" id="container-jogos"></div>
     </div>
     <script>
-        // URLs Oficiais da API Globo/CartolaFC
-        const API_PARTIDAS = "https://globo.com";
-
-        // Cores padrão aproximadas dos clubes para renderização dos escudos em CSS
-        const CORES_CLUBES = {
-            327: "#1E5D32", 262: "#C21A1A", 293: "#9E0B0B", 266: "#800827", 
-            283: "#154294", 265: "#0A51A1", 264: "#1C1C1C", 280: "#E30613", 
-            263: "#000000", 294: "#006437", 282: "#333333", 276: "#D92B2B", 
-            287: "#B51212", 284: "#0D82C4", 292: "#EBB400", 285: "#E61919", 
-            277: "#444444", 267: "#1A1A1A", 315: "#10254C", 316: "#007A3E"
-        };
+        // Injetando o Proxy AllOrigins para contornar a trava do GitHub Pages
+        const PROXY_CORS = "https://allorigins.win";
+        const API_TARGET = "https://globo.com";
 
         async function carregarDadosAPI() {
             try {
-                const resposta = await fetch(API_PARTIDAS);
+                // Junta o Proxy com o link oficial criptografado em formato URL válido
+                const resposta = await fetch(PROXY_CORS + encodeURIComponent(API_TARGET));
                 const dados = await resposta.json();
 
                 if (!dados || !dados.clubes || !dados.partidas) {
-                    throw new Error("Erro na estrutura da API");
+                    throw new Error("Resposta inválida da API");
                 }
 
                 processarEAtualizar(dados);
@@ -267,28 +258,25 @@
         function processarEAtualizar(dados) {
             const clubesAPI = dados.clubes;
             const partidasAPI = dados.partidas;
-
             const tabelaClubes = {};
 
-            // Inicializa todos os clubes retornados pela API com valores padrão simulados estáveis
+            // Mapeia e distribui os clubes com estatísticas simuladas proporcionais de forma estática
             Object.keys(clubesAPI).forEach((id, index) => {
                 const clube = clubesAPI[id];
-                // Cria valores base lógicos e proporcionais para popular a classificação antes dos gols ao vivo
-                const pontosBase = Math.floor(Math.random() * 12) + (40 - index * 1.8);
+                const pontosBase = Math.floor(45 - index * 1.6);
                 tabelaClubes[id] = {
                     id: id,
                     nome: clube.nome,
                     abreviacao: clube.abreviacao,
-                    cor: CORES_CLUBES[id] || "#444",
                     escudo: clube.escudos['30x30'] || Object.values(clube.escudos)[0],
-                    p: Math.max(0, Math.floor(pontosBase)),
+                    p: Math.max(0, pontosBase),
                     j: 22,
                     v: Math.max(0, Math.floor(pontosBase / 3)),
-                    sg: Math.floor(20 - index * 2)
+                    sg: Math.floor(18 - index * 1.5)
                 };
             });
 
-            // Motor de Tempo Real: lê os jogos da rodada atual e altera a tabela ao vivo na tela
+            // Lê as 10 partidas e recalcula a pontuação dinamicamente baseada nos gols da rodada
             partidasAPI.slice(0, 10).forEach(jogo => {
                 const idCasa = jogo.clube_casa_id;
                 const idFora = jogo.clube_visitor_id;
@@ -297,7 +285,6 @@
                     const casa = tabelaClubes[idCasa];
                     const fora = tabelaClubes[idFora];
 
-                    // Adiciona o número de jogos da rodada em andamento
                     casa.j += 1;
                     fora.j += 1;
 
@@ -317,7 +304,7 @@
                 }
             });
 
-            // Ordena os times seguindo os critérios de desempate da CBF
+            // Reordena o array segundo os critérios oficiais
             const listaOrdenada = Object.values(tabelaClubes).sort((a, b) => {
                 if (b.p !== a.p) return b.p - a.p;
                 if (b.v !== a.v) return b.v - a.v;
@@ -344,7 +331,7 @@
                 tr.innerHTML = `
                     <td class="${classeLinha}">${pos}</td>
                     <td class="Alinhado-esquerda">
-                        <img class="escudo-time" src="${time.escudo}" alt="🛡️" onerror="this.style.display='none'">
+                        <img class="escudo-time" src="${time.escudo}" alt="🛡️">
                         ${time.abreviacao}
                     </td>
                     <td class="destaque-pontos">${time.p}</td>
@@ -371,7 +358,6 @@
 
                 if (!casa || !fora) return;
 
-                // Identifica se a partida está rolando no momento baseado nas flags da API Globo
                 const ehAoVivo = jogo.partida_valida === true && jogo.placar_clube_casa !== null;
                 const classeCard = ehAoVivo ? "card-jogo ao-vivo" : "card-jogo";
                 const textoStatus = ehAoVivo ? "⏱️ Ao Vivo" : "Encerrado / Agendado";
@@ -395,7 +381,7 @@
             });
         }
 
-        // Configura o cronômetro para atualizar e recalcular o painel inteiro a cada 5 segundos
+        // Atualização e checagem da API a cada 5 segundos cravados
         setInterval(carregarDadosAPI, 5000);
         carregarDadosAPI();
     </script>

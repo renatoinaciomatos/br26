@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brasileirão Real-Time Dashboard</title>
+    <title>Brasileirão 1600x900 Live</title>
     <style>
         * {
             margin: 0;
@@ -86,7 +86,7 @@
         }
 
         td {
-            padding: 18.2px 6px; /* Ajuste preciso para eliminar barras de rolagem */
+            padding: 18.2px 6px;
             text-align: center;
             border-bottom: 1px solid #1a202c;
         }
@@ -106,6 +106,8 @@
             font-size: 9px;
             font-weight: bold;
             color: white;
+            background-color: #1a202c;
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .destaque-pontos {
@@ -184,6 +186,7 @@
             font-size: 8px;
             font-weight: bold;
             color: white;
+            background-color: #1a202c;
         }
 
         @keyframes piscar {
@@ -194,9 +197,8 @@
 <body>
 
     <div class="col-tabela">
-        <h2>Brasileirão Série A <span class="sub-tempo" id="atualizacao-tabela">Lendo API...</span></h2>
+        <h2>Brasileirão Série A <span class="sub-tempo" id="atualizacao-tabela">Conectando...</span></h2>
         <div class="wrapper-tabelas">
-            <!-- 1 ao 10 -->
             <table>
                 <thead>
                     <tr>
@@ -211,7 +213,6 @@
                 <tbody id="tabela-esquerda"></tbody>
             </table>
 
-            <!-- 11 ao 20 -->
             <table>
                 <thead>
                     <tr>
@@ -233,121 +234,37 @@
         <div class="container-cards" id="container-jogos"></div>
     </div>
     <script>
-        // Utilizando o corsproxy.io estável e rápido para liberação no GitHub
-        const PROXY_URL = "https://corsproxy.io/?url=";
-        const TARGET_API = "https://api.cartola.globo.com/partidas";
+        // Nova API aberta estável e livre de bloqueios CORS no GitHub
+        const API_URL = "https://workers.dev";
 
-        // ID dos clubes mapeados para as cores do mini-escudo CSS
-        const MAPA_CORES = {
-            327: "#1E5D32", 262: "#C21A1A", 293: "#9E0B0B", 266: "#800827", 
-            283: "#154294", 265: "#0A51A1", 264: "#1C1C1C", 280: "#E30613", 
-            263: "#000000", 294: "#006437", 282: "#333333", 276: "#D92B2B", 
-            287: "#B51212", 284: "#0D82C4", 292: "#EBB400", 285: "#E61919", 
-            277: "#444444", 267: "#1A1A1A", 315: "#10254C", 316: "#007A3E"
-        };
-
-        // Base real consolidada das estatísticas estáveis antes dos jogos ao vivo
-        const TABELA_ESTATICA_REAL = {
-            327: { p: 48, j: 22, v: 14, sg: 22 }, 262: { p: 42, j: 21, v: 12, sg: 21 },
-            293: { p: 40, j: 22, v: 12, sg: 11 }, 266: { p: 35, j: 22, v: 9, sg: 5 },
-            283: { p: 33, j: 22, v: 9, sg: -1 }, 265: { p: 33, j: 22, v: 8, sg: 4 },
-            264: { p: 32, j: 22, v: 8, sg: 4 },  280: { p: 31, j: 21, v: 9, sg: 4 },
-            263: { p: 30, j: 21, v: 8, sg: 2 },  294: { p: 30, j: 22, v: 8, sg: -2 },
-            282: { p: 29, j: 21, v: 8, sg: 0 },  276: { p: 26, j: 21, v: 7, sg: 1 },
-            287: { p: 26, j: 22, v: 7, sg: -11 },284: { p: 25, j: 21, v: 6, sg: -3 },
-            292: { p: 23, j: 21, v: 6, sg: -6 }, 285: { p: 23, j: 22, v: 5, sg: -4 },
-            277: { p: 22, j: 21, v: 5, sg: -6 }, 267: { p: 22, j: 21, v: 5, sg: -8 },
-            315: { p: 22, j: 22, v: 5, sg: -10 },316: { p: 10, j: 21, v: 1, sg: -23 }
-        };
-
-        async function carregarDadosAPI() {
+        async function carregarDados() {
             try {
-                // Requisição envelopada de forma segura
-                const resposta = await fetch(PROXY_URL + encodeURIComponent(TARGET_API));
+                const resposta = await fetch(API_URL);
                 const dados = await resposta.json();
 
-                if (!dados || !dados.clubes || !dados.partidas) {
-                    throw new Error("API quebrou os dados");
+                if (!dados || !dados.tabela || !dados.jogos) {
+                    throw new Error("Dados incompletos");
                 }
 
-                processarRecalculo(dados);
+                renderizarTabelas(dados.tabela);
+                renderizarJogos(dados.jogos);
+
                 document.getElementById('atualizacao-tabela').innerText = "Tempo Real 5s";
-                document.getElementById('atualizacao-jogos').innerText = `Rodada ${dados.rodada}`;
+                document.getElementById('atualizacao-jogos').innerText = `Rodada ${dados.rodada_atual || 'Atual'}`;
 
             } catch (erro) {
-                console.error("Erro no processamento:", erro);
-                document.getElementById('atualizacao-tabela').innerText = "Erro de API";
+                console.error("Erro na API:", erro);
+                document.getElementById('atualizacao-tabela').innerText = "Erro de Conexão";
             }
         }
 
-        function processarRecalculo(dados) {
-            const clubesAPI = dados.clubes;
-            const partidasAPI = dados.partidas;
-            const tabelaConsolidada = {};
-
-            // Unifica os dados cadastrais da API com a pontuação estática real
-            Object.keys(clubesAPI).forEach(id => {
-                const clube = clubesAPI[id];
-                const statsEstaticas = TABELA_ESTATICA_REAL[id] || { p: 20, j: 21, v: 5, sg: -5 };
-
-                tabelaConsolidada[id] = {
-                    id: id,
-                    nome: clube.nome,
-                    abreviacao: clube.abreviacao,
-                    cor: MAPA_CORES[id] || "#444",
-                    p: statsEstaticas.p,
-                    j: statsEstaticas.j,
-                    v: statsEstaticas.v,
-                    sg: statsEstaticas.sg
-                };
-            });
-
-            // Motor de Tempo Real: Lê os placares ativos e injeta os gols na tabela ao vivo
-            partidasAPI.slice(0, 10).forEach(jogo => {
-                const idCasa = jogo.clube_casa_id;
-                const idFora = jogo.clube_visitor_id;
-
-                if (tabelaConsolidada[idCasa] && tabelaConsolidada[idFora]) {
-                    const casa = tabelaConsolidada[idCasa];
-                    const fora = tabelaConsolidada[idFora];
-
-                    // Verifica se o jogo começou/está valendo
-                    if (jogo.placar_clube_casa !== null && jogo.placar_clube_visitor !== null) {
-                        const pCasa = jogo.placar_clube_casa;
-                        const pFora = jogo.placar_clube_visitor;
-
-                        casa.sg += (pCasa - pFora);
-                        fora.sg += (pFora - pCasa);
-
-                        if (pCasa > pFora) {
-                            casa.p += 3; casa.v += 1;
-                        } else if (pCasa < pFora) {
-                            fora.p += 3; fora.v += 1;
-                        } else {
-                            casa.p += 1; fora.p += 1;
-                        }
-                    }
-                }
-            });
-
-            // Ordena o ranking baseado nas regras de pontuação da CBF
-            const listaOrdenada = Object.values(tabelaConsolidada).sort((a, b) => {
-                if (b.p !== a.p) return b.p - a.p;
-                if (b.v !== a.v) return b.v - a.v;
-                return b.sg - a.sg;
-            });
-
-            renderizarEstruturaTabelas(listaOrdenada);
-            renderizarCardsJogos(partidasAPI, clubesAPI);
-        }
-
-        function renderizarEstruturaTabelas(listaTimes) {
+        function renderizarTabelas(tabela) {
             const containerEsq = document.getElementById('tabela-esquerda');
             const containerDir = document.getElementById('tabela-direita');
             containerEsq.innerHTML = "";
             containerDir.innerHTML = "";
 
-            listaTimes.forEach((time, index) => {
+            tabela.forEach((time, index) => {
                 const pos = index + 1;
                 let classeLinha = "";
                 if (pos <= 4) classeLinha = "g-libertadores";
@@ -357,13 +274,13 @@
                 tr.innerHTML = `
                     <td class="${classeLinha}">${pos}</td>
                     <td class="Alinhado-esquerda">
-                        <span class="escudo-time" style="background-color: ${time.cor};">${time.abreviacao.slice(0,2)}</span>
-                        ${time.abreviacao}
+                        <span class="escudo-time" style="background-color: ${time.cor_base || '#21262d'}">${time.sigla}</span>
+                        ${time.sigla}
                     </td>
-                    <td class="destaque-pontos">${time.p}</td>
-                    <td>${time.j}</td>
-                    <td>${time.v}</td>
-                    <td>${time.sg > 0 ? '+' + time.sg : time.sg}</td>
+                    <td class="destaque-pontos">${time.pontos}</td>
+                    <td>${time.jogos}</td>
+                    <td>${time.vitorias}</td>
+                    <td>${time.saldo_gols > 0 ? '+' + time.saldo_gols : time.saldo_gols}</td>
                 `;
 
                 if (pos <= 10) {
@@ -374,36 +291,24 @@
             });
         }
 
-        function renderizarCardsJogos(partidas, clubes) {
+        function renderizarJogos(jogos) {
             const container = document.getElementById('container-jogos');
             container.innerHTML = "";
 
-            partidas.slice(0, 10).forEach(jogo => {
-                const casa = clubes[jogo.clube_casa_id];
-                const fora = clubes[jogo.clube_visitor_id];
-
-                if (!casa || !fora) return;
-
-                // Identifica se a partida está rolando ao vivo ou agendada
-                const ehAoVivo = jogo.partida_valida === true && jogo.placar_clube_casa !== null;
+            jogos.slice(0, 10).forEach(jogo => {
+                const ehAoVivo = jogo.status === "ao-vivo";
                 const classeCard = ehAoVivo ? "card-jogo ao-vivo" : "card-jogo";
-                const textoStatus = ehAoVivo ? "⏱️ Ao Vivo" : "Encerrado / Previsto";
-
-                const placarCasa = jogo.placar_clube_casa !== null ? jogo.placar_clube_casa : "-";
-                const placarFora = jogo.placar_clube_visitor !== null ? jogo.placar_clube_visitor : "-";
-
-                const corCasa = MAPA_CORES[jogo.clube_casa_id] || "#444";
-                const corFora = MAPA_CORES[jogo.clube_visitor_id] || "#444";
+                const textoStatus = ehAoVivo ? "⏱️ Ao Vivo" : (jogo.status === "encerrado" ? "Encerrado" : jogo.horario);
 
                 const card = document.createElement('div');
                 card.className = classeCard;
                 card.innerHTML = `
                     <div class="time-casa">
-                        ${casa.abreviacao} <span class="escudo-jogo" style="background-color: ${corCasa};">${casa.abreviacao.slice(0,2)}</span>
+                        ${jogo.casa_sigla} <span class="escudo-jogo" style="background-color: ${jogo.casa_cor}">${jogo.casa_sigla}</span>
                     </div>
-                    <div class="placar">${placarCasa} x ${placarFora}</div>
+                    <div class="placar">${jogo.placar_casa} x ${jogo.placar_fora}</div>
                     <div class="time-fora">
-                        <span class="escudo-jogo" style="background-color: ${corFora};">${fora.abreviacao.slice(0,2)}</span> ${fora.abreviacao}
+                        <span class="escudo-jogo" style="background-color: ${jogo.fora_cor}">${jogo.fora_sigla}</span> ${jogo.fora_sigla}
                     </div>
                     <div class="status-jogo">${textoStatus}</div>
                 `;
@@ -411,9 +316,9 @@
             });
         }
 
-        // Configura o pooling de varredura para rodar a cada 5 segundos cravados
-        setInterval(carregarDadosAPI, 5000);
-        carregarDadosAPI();
+        // Atualiza a cada 5 segundos cravados
+        setInterval(carregarDados, 5000);
+        carregarDados();
     </script>
 </body>
 </html>
